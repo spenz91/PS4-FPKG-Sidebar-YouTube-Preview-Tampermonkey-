@@ -1145,30 +1145,57 @@ box-shadow:2px 0 8px rgba(0,0,0,.3);font:14px/1.35 -apple-system,BlinkMacSystemF
 			candidates.add(base.replace(/\b(Remaster(?:ed)?|Remake|Definitive Edition|HD Collection|Ultimate Edition|Trilogy|Collection|Director'?s Cut)\b/gi, '').replace(/\s{2,}/g, ' ').trim());
 			// strip punctuation
 			candidates.add(base.replace(/[^\w\s]/g, ' ').replace(/\s{2,}/g, ' ').trim());
+			// split on common separators to add sub-title candidates
+			for (const sep of ['+', '/', '&', ' and ']) {
+				if (base.includes(sep)) {
+					for (const part of base.split(sep)) {
+						const p = part.replace(/[^\w\s]/g, ' ').replace(/\s{2,}/g, ' ').trim();
+						if (p) candidates.add(p);
+					}
+				}
+			}
+			// heuristic for Borderlands Handsome Collection
+			const lower = base.toLowerCase();
+			if (lower.includes('borderlands') && (lower.includes('pre-sequel') || lower.includes('pre sequel')) && /\b2\b/.test(lower)) {
+				candidates.add('Borderlands The Handsome Collection');
+			}
 			return Array.from(candidates).filter(Boolean);
 		}
 
 	async function fetchYouTubeId(gameName) {
 		if (ytCache.has(gameName)) return ytCache.get(gameName);
-		const baseNames = cleanupCandidates(gameName);
-		const queries = [];
-		for (const b of baseNames) {
-			queries.push(b + ' gameplay');
-			queries.push(b + ' gameplay trailer');
+		const names = cleanupCandidates(gameName);
+		const primary = names[0] || gameName;
+
+		async function searchOnce(term) {
+			// Filter to videos only via sp param (type=video)
+			const url = 'https://www.youtube.com/results?sp=EgIQAQ%3D%3D&search_query=' + encodeURIComponent(term);
+			const res = await gmReq({ url, headers: { 'Accept': 'text/html' } });
+			if (res.status !== 200 || !res.responseText) return null;
+			const html = res.responseText;
+			// Prefer first videoRenderer's videoId
+			const vrIdx = html.indexOf('"videoRenderer"');
+			if (vrIdx !== -1) {
+				const tail = html.slice(vrIdx);
+				const mvr = tail.match(/"videoId":"([a-zA-Z0-9_-]{11})"/);
+				if (mvr && mvr[1]) return mvr[1];
+			}
+			// Fallback: first videoId anywhere
+			const any = html.match(/"videoId":"([a-zA-Z0-9_-]{11})"/);
+			if (any && any[1]) return any[1];
+			// Fallback: first watch?v= id in markup
+			const m2 = html.match(/\bwatch\?v=([a-zA-Z0-9_-]{11})/);
+			return m2 && m2[1] ? m2[1] : null;
 		}
-		for (const q of queries) {
-			try {
-				const url = 'https://www.youtube.com/results?search_query=' + encodeURIComponent(q);
-				const res = await gmReq({ url, headers: { 'Accept': 'text/html' } });
-				if (res.status !== 200 || !res.responseText) continue;
-				const html = res.responseText;
-				// Find video IDs like "watch?v=XXXXXXXXXXX"
-				const m = html.match(/\bwatch\?v=([a-zA-Z0-9_-]{11})/);
-				if (m && m[1]) {
-					ytCache.set(gameName, m[1]);
-					return m[1];
-				}
-			} catch {}
+
+		// Use primary cleaned name: prefer PS4 gameplay trailer first
+		let vid = await searchOnce(primary + ' ps4 gameplay trailer');
+		if (!vid) vid = await searchOnce(primary + ' gameplay trailer');
+		if (!vid) vid = await searchOnce(primary + ' ps4 gameplay');
+		if (!vid) vid = await searchOnce(primary + ' gameplay');
+		if (vid) {
+			ytCache.set(gameName, vid);
+			return vid;
 		}
 		return null;
 	}
