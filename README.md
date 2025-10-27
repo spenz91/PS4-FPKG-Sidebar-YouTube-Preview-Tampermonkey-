@@ -2,6 +2,11 @@
 
 Small userscript that adds a left sidebar with an embedded list of game .pkg URLs and a right YouTube gameplay preview panel. Clicking a game fills the page input and loads a gameplay video.
 
+<p align="center">
+    <img width="900" src="https://i.imgur.com/MyqbTUl.pngg" alt="Material Bread logo">
+</p>
+
+
 ### Install
 - Install Tampermonkey in your browser.
 - Open `PS4 FPKG.js` and install it into Tampermonkey.
