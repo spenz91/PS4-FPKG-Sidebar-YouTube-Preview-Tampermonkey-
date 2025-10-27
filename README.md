@@ -10,7 +10,7 @@ Small userscript that adds a left sidebar with an embedded list of game .pkg URL
 1. On PS5, open Settings → etaHEN Toolbox → Services.
 2. Turn on Direct Package Installer V2 (DPIv2). You should see DPIv2 listed in Services.
 3. Find your PS5 IP in Network settings.
-4. On a PC/phone on the same LAN, open `http://PS5_IP:12800` (example: `http://192.168.1.50:12800`). This is the DPIv2 WebGUI.
+4. On a PC on the same LAN, open `http://PS5_IP:12800` (example: `http://192.168.1.50:12800`). This is the DPIv2 WebGUI.
 
 ### Features
 - Left sidebar with a searchable list of embedded .pkg URLs.
